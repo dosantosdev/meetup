@@ -1,48 +1,72 @@
-import MeetupDetail from "@/components/meetups/MeetupDetail";
+import { MongoClient, ObjectId } from "mongodb";
 
-function MeetupDetails() {
+import MeetupDetail from "@/components/meetups/MeetupDetail";
+import { Fragment } from "react";
+import Head from "next/head";
+
+function MeetupDetails(props) {
   return (
-    <MeetupDetail
-      image="https://www.melhoresdestinos.com.br/wp-content/uploads/2023/01/pelourinho-salvador-bahia-capa-2023.jpg"
-      title="A First Meetup"
-      address="Pelourinho - Salvador - BA"
-      description="This is a first meetup"
-    />
+    <Fragment>
+      <Head>
+        <title>{props.meetupData.title}</title>
+        <meta name="description" content={props.meetupData.description} />
+      </Head>
+      <MeetupDetail
+        image={props.meetupData.image}
+        title={props.meetupData.title}
+        address={props.meetupData.address}
+        description={props.meetupData.description}
+      />
+    </Fragment>
   );
 }
 
 export async function getStaticPaths() {
+  const client = await MongoClient.connect(
+    "mongodb+srv://deylamyllus_db_user:GPZPKlTy4jqHONRI@cluster0.tkxr1sx.mongodb.net/?appName=Cluster0",
+  );
+  const db = client.db();
+
+  const meetupsCollection = db.collection("meetups");
+
+  const meetups = await meetupsCollection.find({}, { _id: 1 }).toArray();
+
+  client.close();
+
   return {
     fallback: false,
-    paths: [
-      {
-        params: {
-          meetupId: "m1",
-        },
-      },
-      {
-        params: {
-          meetupId: "m2",
-        },
-      },
-    ],
+    paths: meetups.map((meetup) => ({
+      params: { meetupId: meetup._id.toString() },
+    })),
   };
 }
 
 export async function getStaticProps(context) {
   const meetupId = context.params.meetupId;
 
-  console.log(meetupId);
+  const client = await MongoClient.connect(
+    "mongodb+srv://deylamyllus_db_user:GPZPKlTy4jqHONRI@cluster0.tkxr1sx.mongodb.net/?appName=Cluster0",
+  );
+  const db = client.db();
+
+  const meetupsCollection = db.collection("meetups");
+
+  const selectedMeetup = await meetupsCollection.findOne({
+    _id: new ObjectId(meetupId),
+  });
+
+  console.log(selectedMeetup);
+
+  client.close();
 
   return {
     props: {
       meetupData: {
-        image:
-          "https://www.melhoresdestinos.com.br/wp-content/uploads/2023/01/pelourinho-salvador-bahia-capa-2023.jpg",
-        id: meetupId,
-        title: "First Meetup",
-        address: "Pelourinho - Salvador - BA",
-        description: "This is a first meetup",
+        id: selectedMeetup._id.toString(),
+        title: selectedMeetup.title,
+        address: selectedMeetup.address,
+        image: selectedMeetup.image,
+        description: selectedMeetup.description,
       },
     },
   };
